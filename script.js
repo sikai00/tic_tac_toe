@@ -7,9 +7,12 @@ const playerFactory = (playerName, playerSym) => {
 
   const getSym = () => _sym;
 
+  const toString = () => `${_name}, ${_sym}`;
+
   return {
     getName,
-    getSym
+    getSym,
+    toString
   }
 };
 
@@ -44,7 +47,7 @@ const gameBoard = (() => {
 
   const setCell = (player, row, col) => {
     if (_board[row][col] === '') {
-      _board[row][col] = player.getSym()
+      _board[row][col] = player.getSym();
     }
   };
 
@@ -52,30 +55,32 @@ const gameBoard = (() => {
     clearBoard,
     clearBoard2,
     getCell,
-    setCell
+    setCell,
+    _board
   }
 })();
 
 // Game logic
 const gameController = (() => {
-  let gameEnded = false;
+  let winner = null;
   const _playerOne = playerFactory('Player 1', 'X');
   const _playerTwo = playerFactory('Player 2', 'O');
   let _currentTurn = _playerOne;
+
+  /**
+   * Resets the gameboard to an initial state.
+   */
+  const resetGameboard = () => {
+    gameBoard.clearBoard();
+    winner = null;
+    _currentTurn = _playerOne;
+  };
 
   /**
    * Returns the player whose turn is current.
    * @returns Player whose turn is current.
    */
   const getCurrentTurn = () => _currentTurn;
-
-  /**
-   * Wait for input from the current turn's player, then update the cell. Updates
-   * the currentTurn as well.
-   */
-  const getPlayerInput = (row, col) => {
-    gameBoard.setCell(_currentTurn, row, col);
-  }
 
   /**
    * Checks for winning rows on the gameboard.
@@ -88,7 +93,7 @@ const gameController = (() => {
         currRow.push(gameBoard.getCell(row, col));
       }
 
-      if (currRow.every(x => _playerOne.getSym()) || currRow.every(x => _playerTwo.getSym())) {
+      if (currRow.every(x => x === _playerOne.getSym()) || currRow.every(x => x === _playerTwo.getSym())) {
         return true;
       }
     }
@@ -106,7 +111,7 @@ const gameController = (() => {
         currCol.push(gameBoard.getCell(row, col));
       }
 
-      if (currCol.every(x => _playerOne.getSym()) || currRow.every(x => _playerTwo.getSym())) {
+      if (currCol.every(x => x === _playerOne.getSym()) || currCol.every(x => x === _playerTwo.getSym())) {
         return true;
       }
     }
@@ -121,10 +126,10 @@ const gameController = (() => {
     leftDiagonal = [gameBoard.getCell(0,0), gameBoard.getCell(1,1), gameBoard.getCell(2,2)];
     rightDiagonal = [gameBoard.getCell(2,0), gameBoard.getCell(1,1), gameBoard.getCell(0,2)];
 
-    if (leftDiagonal.every(x => _playerOne.getSym()) || 
-        rightDiagonal.every(x => _playerOne.getSym()) ||
-        leftDiagonal.every(x => _playerTwo.getSym()) || 
-        rightDiagonal.every(x => _playerOne.getSym())) {
+    if (leftDiagonal.every(x => x === _playerOne.getSym()) || 
+        rightDiagonal.every(x => x === _playerOne.getSym()) ||
+        leftDiagonal.every(x => x === _playerTwo.getSym()) || 
+        rightDiagonal.every(x => x === _playerOne.getSym())) {
       return true;
     }
     return false;
@@ -157,7 +162,7 @@ const gameController = (() => {
    * Checks if the game has ended.
    * @return True if the game has ended else false.
    */
-  const checkEndGame = () => {
+  const _checkEndGame = () => {
     if (_checkWin() || _checkTie()) {
       return true
     }
@@ -168,23 +173,75 @@ const gameController = (() => {
    * Return the winning player if the game has ended.
    * @return The winning player if there is one else null.
    */
-   const getWinner = () => {
-    if (!gameEnded && !_checkTie()) {
+  const getWinner = () => {
+    if (!_checkTie()) {
       return _currentTurn == _playerOne ? _playerTwo : _playerOne;
     } else {
       return null;
     }
-   }
+  }
+
+  /**
+   * Toggles between players for the current turn.
+   */
+  const _toggleTurn = () => {
+    _currentTurn = _currentTurn == _playerOne ? _playerTwo : _playerOne;
+  }
+
+   /**
+    * Main logic of the game. Represents each step. 
+    * Updates current player's turn, sets the correct cell to the correct 
+    * input. Blocks any next step if a forbidden cell is used as input. 
+    * Checks for wins at each stage. Called upon input to a cell.
+    */
+  const nextStep = (e, row, col) => {
+    if (winner) {
+      return false;
+    }
+    if (gameBoard.getCell(row, col) != '') {
+      return false;
+    }
+    gameBoard.setCell(_currentTurn, row, col);
+
+    if (winner == null &&_checkEndGame()) {
+      winner = getWinner();
+      return true;
+    }
+
+    _toggleTurn();
+    return true;
+  }
 
   return {
+    resetGameboard,
     getCurrentTurn,
-    getPlayerInput,
-    checkEndGame,
-    gameEnded
+    getWinner,
+    nextStep
   };
 })();
 
 // Display logic
 const displayController = (() => {
+  const updateCellDisplay = cell => {
+    row = cell.dataset.row;
+    col = cell.dataset.col;
+    cell.textContent = gameBoard.getCell(row, col);
+  };
 
+  const turnDisplayNode = document.querySelector('.turn');
+  const cellNodelist = document.querySelectorAll('.cell');
+  cellNodelist.forEach(cell => {
+    cell.addEventListener('click', e => gameController.nextStep(e, cell.dataset.row, cell.dataset.col));
+    cell.addEventListener('click', e => updateCellDisplay(e.target));
+    cell.addEventListener('click', () => {
+      turnDisplayNode.textContent = `Turn: ${gameController.getCurrentTurn().toString()}`;
+    });
+  });
+
+  const resetButtonNode = document.querySelector('.reset');
+  resetButtonNode.addEventListener('click', () => {
+    gameController.resetGameboard();
+    cellNodelist.forEach(cell => updateCellDisplay(cell));
+    turnDisplayNode.textContent = `Turn: ${gameController.getCurrentTurn().toString()}`;
+  });
 })();
