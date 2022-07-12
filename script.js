@@ -63,6 +63,7 @@ const gameBoard = (() => {
 // Game logic
 const gameController = (() => {
   let winner = null;
+  let gameEnded = false;
   const _playerOne = playerFactory('Player 1', 'X');
   const _playerTwo = playerFactory('Player 2', 'O');
   let _currentTurn = _playerOne;
@@ -73,6 +74,7 @@ const gameController = (() => {
   const resetGameboard = () => {
     gameBoard.clearBoard();
     winner = null;
+    gameEnded = false;
     _currentTurn = _playerOne;
   };
 
@@ -148,6 +150,9 @@ const gameController = (() => {
    * @return True if there is a tie else false.
    */
   const _checkTie = () => {
+    if (_checkWin()) {
+      return false;
+    }
     for (let row = 0; row < 3; row++) {
       for (let col = 0; col < 3; col++) {
         if (gameBoard.getCell(row, col) == '') {
@@ -164,6 +169,7 @@ const gameController = (() => {
    */
   const _checkEndGame = () => {
     if (_checkWin() || _checkTie()) {
+      gameEnded = true;
       return true
     }
     return false;
@@ -174,8 +180,8 @@ const gameController = (() => {
    * @return The winning player if there is one else null.
    */
   const getWinner = () => {
-    if (!_checkTie()) {
-      return _currentTurn == _playerOne ? _playerTwo : _playerOne;
+    if (_checkEndGame() && !_checkTie()) {
+      return _currentTurn;
     } else {
       return null;
     }
@@ -188,6 +194,12 @@ const gameController = (() => {
     _currentTurn = _currentTurn == _playerOne ? _playerTwo : _playerOne;
   }
 
+  /**
+   * Check if the game has ended due to a win or tie.
+   * @return Whether the game has ended or not.
+   */
+  const checkGameEnded = () => gameEnded;
+
    /**
     * Main logic of the game. Represents each step. 
     * Updates current player's turn, sets the correct cell to the correct 
@@ -195,7 +207,7 @@ const gameController = (() => {
     * Checks for wins at each stage. Called upon input to a cell.
     */
   const nextStep = (e, row, col) => {
-    if (winner) {
+    if (gameEnded || winner) {
       return false;
     }
     if (gameBoard.getCell(row, col) != '') {
@@ -216,6 +228,7 @@ const gameController = (() => {
     resetGameboard,
     getCurrentTurn,
     getWinner,
+    checkGameEnded,
     nextStep
   };
 })();
@@ -229,12 +242,22 @@ const displayController = (() => {
   };
 
   const turnDisplayNode = document.querySelector('.turn');
+  const winnerMessageNode = document.querySelector('.winner');
   const cellNodelist = document.querySelectorAll('.cell');
   cellNodelist.forEach(cell => {
-    cell.addEventListener('click', e => gameController.nextStep(e, cell.dataset.row, cell.dataset.col));
-    cell.addEventListener('click', e => updateCellDisplay(e.target));
-    cell.addEventListener('click', () => {
+    cell.addEventListener('click', e => {
+      gameController.nextStep(e, cell.dataset.row, cell.dataset.col);
+      updateCellDisplay(e.target);
       turnDisplayNode.textContent = `Turn: ${gameController.getCurrentTurn().toString()}`;
+      if (gameController.checkGameEnded()) {
+        turnDisplayNode.style.display = 'none';
+        winnerMessageNode.style.display = 'block';
+        if (gameController.getWinner() != null) {
+          winnerMessageNode.textContent = `Winner: ${gameController.getWinner()}`;
+        } else {
+          winnerMessageNode.textContent = "Tie";
+        }
+      }
     });
   });
 
@@ -243,5 +266,8 @@ const displayController = (() => {
     gameController.resetGameboard();
     cellNodelist.forEach(cell => updateCellDisplay(cell));
     turnDisplayNode.textContent = `Turn: ${gameController.getCurrentTurn().toString()}`;
+    turnDisplayNode.style.display = 'block';
+    winnerMessageNode.style.display = 'none';
   });
+
 })();

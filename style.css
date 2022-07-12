@@ -55,4 +55,18 @@ body {
 .controls {
   flex-grow: 1;
   margin-top: 20px;
+  display: flex;
+  align-items: baseline;
+  column-gap: 30px;
+}
+
+.winner {
+  display: none;
+}
+
+.reset {
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 20px;
+  cursor: pointer;
 }
