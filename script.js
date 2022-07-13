@@ -55,8 +55,7 @@ const gameBoard = (() => {
     clearBoard,
     clearBoard2,
     getCell,
-    setCell,
-    _board
+    setCell
   }
 })();
 
